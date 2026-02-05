@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: azure-test-service
+  name: aura-ecdh-service
 spec:
   selector:
-    app: azure-test-app
+    app: aura-ecdh
   ports:
     - protocol: TCP
       port: 80

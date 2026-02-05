@@ -160,7 +160,7 @@ async function executeProcessRequest(baseUrl: string, deviceId: string, kid: str
         const netStart = performance.now();
         const ctrl = new AbortController();
         const timeout = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT);
-        const response = await fetch(`${baseUrl}/httpTriggerProcess`, {
+        const response = await fetch(`${baseUrl}/process`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ deviceId, kid, publicKeyEphemeral: encClientEph, encryptedData: encData }),
@@ -187,8 +187,14 @@ async function executeProcessRequest(baseUrl: string, deviceId: string, kid: str
         metrics.process.local.push(totalExec - netDuration);
         metrics.process.success++;
         return { nextKid: data.kid, nextEphHex };
+        metrics.process.fail++;
+        return null;
     } catch (error: any) {
-        logError(`Process Error: ${error.message}`);
+        let msg = error.message;
+        if (error.cause) {
+            msg += ` | Cause: ${JSON.stringify(error.cause)}`;
+        }
+        logError(`Process Error: ${msg}`);
         metrics.process.fail++;
         return null;
     }
@@ -212,7 +218,7 @@ async function executeHandshake(baseUrl: string, deviceId: string) {
         const netStart = performance.now();
         const ctrl = new AbortController();
         const timeout = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT);
-        const response = await fetch(`${baseUrl}/httpTriggerHandsheck`, {
+        const response = await fetch(`${baseUrl}/handshake`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(hsRequest),
@@ -245,7 +251,11 @@ async function executeHandshake(baseUrl: string, deviceId: string) {
 
         return { kid: hsData.kid, ssP, backendEphHex };
     } catch (error: any) {
-        logError(`Handshake Error: ${error.message}`);
+        let msg = error.message;
+        if (error.cause) {
+            msg += ` | Cause: ${JSON.stringify(error.cause)}`;
+        }
+        logError(`Handshake Error: ${msg}`);
         metrics.handshake.fail++;
         return null;
     }
@@ -255,7 +265,7 @@ async function runTest() {
     const args = process.argv.slice(2);
     const usersCount = parseInt(args[args.indexOf('--users') + 1]) || 1;
     const requestsPerUser = parseInt(args[args.indexOf('--requests') + 1]) || 5;
-    const baseUrl = 'http://localhost:3000/api';
+    const baseUrl = 'http://20.15.241.22/api';
 
     console.log(`\x1b[1m%s\x1b[0m`, `--- INICIANDO PRUEBA RENDIMIENTO V9 (REFACTORIZADO) ---`);
     console.log(`Configuración: Usuarios=${usersCount}, Peticiones/Usuario=${requestsPerUser}`);

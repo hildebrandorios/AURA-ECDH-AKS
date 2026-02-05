@@ -1,27 +1,31 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: azure-test-app
+  name: aura-ecdh
   labels:
-    app: azure-test-app
+    app: aura-ecdh
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: azure-test-app
+      app: aura-ecdh
   template:
     metadata:
       labels:
-        app: azure-test-app
+        app: aura-ecdh
     spec:
       securityContext:
         runAsUser: 1001
         runAsGroup: 1001
         fsGroup: 1001
       containers:
-      - name: azure-test-app
-        image: azure-test-app:latest
+      - name: aura-ecdh
+        image: pragmaregistry.azurecr.io/aura-ecdh:v1
         imagePullPolicy: IfNotPresent
+        volumeMounts:
+          - name: rsa-key-volume
+            mountPath: "/app/keys"
+            readOnly: true
         ports:
         - containerPort: 3000
         env:
@@ -29,6 +33,11 @@ spec:
         # This is just a placeholder example.
         - name: PORT
           value: "3000"
+        - name: RSA_PRIVATE_KEY
+          valueFrom:
+            secretKeyRef:
+              name: app-rsa-key
+              key: private-key
         - name: REDIS_CONNECTION_STRING
           valueFrom:
             secretKeyRef:
@@ -39,6 +48,11 @@ spec:
             configMapKeyRef:
               name: app-config
               key: vault-url
+        - name: AKV_MASTER_KEY_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: master-key-name
         resources:
           requests:
             memory: "128Mi"
@@ -61,3 +75,19 @@ spec:
         securityContext:
           readOnlyRootFilesystem: true
           allowPrivilegeEscalation: false
+      volumes:
+        - name: rsa-key-volume
+          secret:
+            secretName: app-rsa-key
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aura-ecdh-service
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 3000
+  selector:
+    app: aura-ecdh

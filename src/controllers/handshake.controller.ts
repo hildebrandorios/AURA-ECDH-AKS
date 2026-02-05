@@ -32,7 +32,8 @@ export class HandshakeController {
             request.log.error(`[Handshake] CRITICAL ERROR: ${(error as Error).message}`);
             return reply.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
                 status: HttpStatus.INTERNAL_SERVER_ERROR,
-                body: ERROR_MESSAGES.INTERNAL_ERROR
+                error: ERROR_MESSAGES.INTERNAL_ERROR,
+                detail: (error as Error).message
             });
         }
     }

@@ -12,11 +12,13 @@ WORKDIR /app
 
 # Run as non-root user
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+# Ensure correct permissions for the non-root user
+RUN chown -R appuser:appgroup /app
 USER appuser
 
-COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/dist ./dist
-RUN npm ci --only=production
+COPY --from=builder --chown=appuser:appgroup /app/package*.json ./
+COPY --from=builder --chown=appuser:appgroup /app/dist ./dist
+RUN npm ci --omit=dev
 
 EXPOSE 3000
 

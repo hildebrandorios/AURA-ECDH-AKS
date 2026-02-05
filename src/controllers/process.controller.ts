@@ -37,7 +37,8 @@ export class ProcessController {
 
             return reply.status(statusCode).send({
                 status: statusCode,
-                body: error.message.includes('401') ? ERROR_MESSAGES.UNAUTHORIZED : ERROR_MESSAGES.INTERNAL_ERROR
+                error: error.message.includes('401') ? ERROR_MESSAGES.UNAUTHORIZED : ERROR_MESSAGES.INTERNAL_ERROR,
+                detail: error.message
             });
         }
     }

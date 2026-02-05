@@ -1,5 +1,5 @@
 {
-  "name": "azure-test",
+  "name": "aura-ecdh",
   "version": "1.0.0",
   "description": "",
   "scripts": {
@@ -13,7 +13,7 @@
     "test:unit": "jest --selectProjects unit",
     "test:integration": "jest --selectProjects integration",
     "test:coverage": "jest --coverage",
-    "docker:build": "docker build -t azure-test ."
+    "docker:build": "docker build -t aura-ecdh ."
   },
   "dependencies": {
     "@azure/identity": "^4.13.0",
