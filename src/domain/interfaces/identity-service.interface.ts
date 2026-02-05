@@ -1,3 +1,7 @@
 export interface IIdentityService {
-    getEntropy(deviceId: string): Promise<string>;
+    initialize(): Promise<void>;
+    getEntropy(): string;
+    getRSAPublicKey(): Promise<string>;
+    decryptRSA(ciphertextB64: string): Promise<string>;
+    encryptRSAPrivate(plaintext: string | Buffer): string;
 }

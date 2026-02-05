@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: azure-test-app
+  labels:
+    app: azure-test-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: azure-test-app
+  template:
+    metadata:
+      labels:
+        app: azure-test-app
+    spec:
+      securityContext:
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+      containers:
+      - name: azure-test-app
+        image: azure-test-app:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 3000
+        env:
+        # NOTE: Secrets should be injected via generic K8s secrets or CSI driver, not plain text here.
+        # This is just a placeholder example.
+        - name: PORT
+          value: "3000"
+        - name: REDIS_CONNECTION_STRING
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: redis-connection
+        - name: AKV_VAULT_URL
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: vault-url
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "250m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        securityContext:
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false

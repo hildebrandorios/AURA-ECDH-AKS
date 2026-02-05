@@ -13,13 +13,13 @@ module.exports = {
     customExportConditions: ['node', 'node-addons'],
   },
   collectCoverage: true,
-  coverageDirectory: "coverage",
   collectCoverageFrom: [
     "src/**/*.ts",
+    "!src/server.ts",
     "!src/index.ts",
-    "!src/functions/*.ts", // Azure functions are hard to test directly without heavy mocking, we test logic in Use Cases
     "!src/**/__tests__/**"
   ],
+  coverageDirectory: "coverage",
   coverageThreshold: {
     global: {
       branches: 90,
@@ -28,4 +28,20 @@ module.exports = {
       statements: 90,
     },
   },
+  projects: [
+    {
+      displayName: "unit",
+      testMatch: ["<rootDir>/tests/unit/**/*.test.ts"],
+      transform: {
+        ...tsJestTransformCfg,
+      },
+    },
+    {
+      displayName: "integration",
+      testMatch: ["<rootDir>/tests/integration/**/*.test.ts"],
+      transform: {
+        ...tsJestTransformCfg,
+      },
+    }
+  ]
 };

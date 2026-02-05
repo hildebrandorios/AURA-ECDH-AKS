@@ -1,4 +1,4 @@
-import { HandshakeSession } from '../handshake-session.entity';
+import { HandshakeSession } from '../../src/domain/entities/handshake-session.entity';
 
 describe('HandshakeSession', () => {
     it('should create a valid session instance', () => {

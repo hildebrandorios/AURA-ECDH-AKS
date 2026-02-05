@@ -1,6 +1,7 @@
-import { ProcessEncryptedData } from '../process-encrypted-data.use-case';
-import { ICryptoProvider } from '../../../domain/interfaces/crypto-provider.interface';
-import { ISessionRepository } from '../../../domain/interfaces/session-repository.interface';
+import { ProcessEncryptedData } from '../../src/application/use-cases/process-encrypted-data.use-case';
+import { ICryptoProvider } from '../../src/domain/interfaces/crypto-provider.interface';
+import { ISessionRepository } from '../../src/domain/interfaces/session-repository.interface';
+import { Encoding, ERROR_MESSAGES } from '../../src/config/constants';
 
 jest.mock('uuid', () => ({ v4: () => 'new-mocked-kid' }));
 
@@ -11,10 +12,10 @@ describe('ProcessEncryptedData Use Case', () => {
 
     const encodeEncrypted = (iv: string, tag: string, payload: string) => {
         return Buffer.concat([
-            Buffer.from(iv, 'hex'),
-            Buffer.from(tag, 'hex'),
-            Buffer.from(payload, 'hex')
-        ]).toString('base64');
+            Buffer.from(iv, Encoding.HEX),
+            Buffer.from(tag, Encoding.HEX),
+            Buffer.from(payload, Encoding.HEX)
+        ]).toString(Encoding.BASE64);
     };
 
     beforeEach(() => {
@@ -79,6 +80,7 @@ describe('ProcessEncryptedData Use Case', () => {
 
         expect(mockSessionRepository.getPrimarySecret).toHaveBeenCalledWith('device-123');
         expect(mockCryptoProvider.decryptAESGCM).toHaveBeenCalledWith('primary-secret-hex', '03'.repeat(32), '01'.repeat(12), '02'.repeat(16));
+        expect(mockCryptoProvider.deriveMessageKey).toHaveBeenCalledWith('primary-secret-hex', 'ss-e-hex', 'device-123');
 
         // El resultado debe estar en Base64
         expect(typeof result.encryptedData).toBe('string');
@@ -89,5 +91,34 @@ describe('ProcessEncryptedData Use Case', () => {
     it('should throw 401 if secrets are missing', async () => {
         mockSessionRepository.getPrimarySecret.mockResolvedValue(null);
         await expect(useCase.execute({} as any)).rejects.toThrow('401');
+    });
+
+    it('should throw if publicKeyEphemeral decryption fails', async () => {
+        mockSessionRepository.getPrimarySecret.mockResolvedValue('ps');
+        mockSessionRepository.getEphemeralPrivateKey.mockResolvedValue('epk');
+        mockCryptoProvider.decryptAESGCM.mockImplementationOnce(() => { throw new Error('Decryption Failed'); });
+
+        await expect(useCase.execute({
+            deviceId: 'd', kid: 'k',
+            publicKeyEphemeral: encodeEncrypted('01'.repeat(12), '02'.repeat(16), '03'.repeat(32)),
+            encryptedData: 'e'
+        } as any)).rejects.toThrow(ERROR_MESSAGES.DECRYPTION_FAILED);
+    });
+
+    it('should throw if payload decryption fails', async () => {
+        mockSessionRepository.getPrimarySecret.mockResolvedValue('ps');
+        mockSessionRepository.getEphemeralPrivateKey.mockResolvedValue('epk');
+        // First decrypt (clientEph) succeeds
+        mockCryptoProvider.decryptAESGCM.mockReturnValueOnce('client-eph-pem');
+        mockCryptoProvider.computeSharedSecret.mockReturnValue('ss');
+        mockCryptoProvider.deriveMessageKey.mockReturnValue('km');
+        // Second decrypt (payload) fails
+        mockCryptoProvider.decryptAESGCM.mockImplementationOnce(() => { throw new Error('Payload Decryption Failed'); });
+
+        await expect(useCase.execute({
+            deviceId: 'd', kid: 'k',
+            publicKeyEphemeral: encodeEncrypted('01'.repeat(12), '02'.repeat(16), '03'.repeat(32)),
+            encryptedData: encodeEncrypted('04'.repeat(12), '05'.repeat(16), '06'.repeat(32))
+        } as any)).rejects.toThrow(ERROR_MESSAGES.DECRYPTION_FAILED);
     });
 });

@@ -12,7 +12,7 @@ El script acepta tres parámetros principales:
 | Parámetro | Descripción | Defecto |
 | :--- | :--- | :--- |
 | `--users` | Cantidad de usuarios (dispositivos) paralelos. | 10 |
-| `--requests` | Total de peticiones a realizar entre todos los usuarios. | 100 |
+| `--requests` | Total de peticiones a realizar por usuario. | 100 |
 | `--seconds` | Duración aproximada de la ráfaga de carga. | 5 |
 
 ### Ejemplo de comando:

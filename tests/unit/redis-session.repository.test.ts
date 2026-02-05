@@ -1,4 +1,4 @@
-import { RedisSessionRepository } from '../redis-session.repository';
+import { RedisSessionRepository } from '../../src/infrastructure/adapters/redis-session.repository';
 import { createClient } from 'redis';
 
 jest.mock('redis', () => ({

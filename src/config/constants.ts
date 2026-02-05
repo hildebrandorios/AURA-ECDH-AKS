@@ -3,11 +3,43 @@
  */
 
 /**
+ * Valid cryptographic curves
+ */
+export enum CryptoCurve {
+    SECP256K1 = 'secp256k1',
+    X25519 = 'x25519'
+}
+
+/**
+ * Common Encoding formats
+ */
+export enum Encoding {
+    HEX = 'hex',
+    BASE64 = 'base64',
+    UTF8 = 'utf8',
+    BASE64URL = 'base64url'
+}
+
+/**
+ * HTTP Status Codes
+ */
+export enum HttpStatus {
+    OK = 200,
+    CREATED = 201,
+    BAD_REQUEST = 400,
+    UNAUTHORIZED = 401,
+    INTERNAL_SERVER_ERROR = 500
+}
+
+/**
  * Cryptographic configuration constants
  */
 export const CRYPTO = {
-    /** Elliptic curve used for ECDH key exchange */
-    CURVE: 'secp256k1' as const,
+    /** Default elliptic curve */
+    DEFAULT_CURVE: CryptoCurve.SECP256K1,
+
+    /** Suffix for ephemeral curve */
+    EPHEMERAL_CURVE: CryptoCurve.X25519,
 
     /** Symmetric encryption algorithm */
     ENCRYPTION_ALGORITHM: 'aes-256-gcm' as const,
@@ -18,23 +50,32 @@ export const CRYPTO = {
     /** Azure Key Vault signature algorithm */
     SIGNATURE_ALGORITHM: 'ES256K' as const,
 
-    /** JWK key type for elliptic curve */
-    KEY_TYPE: 'EC' as const,
+    /** RSA Padding labels */
+    RSA_OAEP_PADDING: 'RSA_PKCS1_OAEP_PADDING' as const,
+    RSA_PKCS1_PADDING: 'RSA_PKCS1_PADDING' as const,
 
-    /** Alternative curve name used in some contexts */
-    CURVE_ALT: 'K-256' as const,
+    /** HKDF Info string */
+    HKDF_INFO_MESSAGE: 'HandshakeMessageKey' as const,
 
-    /** Nonce/salt byte length for key derivation */
+    /** Nonce/salt byte length */
     NONCE_BYTES: 32,
 
-    /** Initialization vector byte length for AES-GCM */
+    /** AES lengths */
     IV_BYTES: 12,
-
-    /** Authentication tag byte length for AES-GCM */
     TAG_BYTES: 16,
+} as const;
 
-    /** Hex string padding length */
-    HEX_PADDING: 64,
+/**
+ * Centralized Error Messages
+ */
+export const ERROR_MESSAGES = {
+    INVALID_SESSION: "401: Invalid session or device",
+    MISSING_FIELDS: "Missing required fields (deviceId, publicKeyPrimary)",
+    INTERNAL_ERROR: "Internal Server Error",
+    UNAUTHORIZED: "Unauthorized access",
+    HANDSHAKE_FAILED: "Handshake process failed",
+    DECRYPTION_FAILED: "Decryption failed",
+    KEY_VAULT_ERROR: "Azure Key Vault service error",
 } as const;
 
 /**
@@ -49,16 +90,11 @@ export const TTL = {
 } as const;
 
 /**
- * Redis key prefixes for session storage
+ * Redis key prefixes
  */
 export const REDIS_KEYS = {
-    /** Primary shared secret prefix */
     PRIMARY_PREFIX: 'handshake:primary:' as const,
-
-    /** Ephemeral private key prefix */
     EPHEMERAL_PREFIX: 'handshake:eph:' as const,
-
-    /** Last KID mapping prefix */
     LAST_KID_PREFIX: 'handshake:lastKid:' as const,
 } as const;
 
@@ -66,12 +102,11 @@ export const REDIS_KEYS = {
  * Environment variable keys
  */
 export const ENV_KEYS = {
-    /** Azure Key Vault URL */
     VAULT_URL: 'AKV_VAULT_URL' as const,
-
-    /** Azure Key Vault master key name */
     MASTER_KEY_NAME: 'AKV_MASTER_KEY_NAME' as const,
-
-    /** Redis connection string */
+    RSA_KEY_NAME: 'AKV_RSA_KEY_NAME' as const,
+    RSA_PRIVATE_KEY: 'RSA_PRIVATE_KEY' as const,
     REDIS_CONNECTION: 'REDIS_CONNECTION_STRING' as const,
+    PORT: 'PORT' as const,
+    BASE_URL: 'BASE_URL' as const,
 } as const;

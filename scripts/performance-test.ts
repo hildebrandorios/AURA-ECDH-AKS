@@ -5,30 +5,35 @@ import { v4 as uuidv4, v5 as uuidv5 } from 'uuid';
 import * as fs from 'fs';
 import * as path from 'path';
 import { performance } from 'perf_hooks';
+import { Encoding, CryptoCurve, CRYPTO } from '../src/config/constants';
 
-console.log('>>> PERFORMANCE TEST SCRIPT LOADED (LOGIC V5 - ADVANCED METRICS)');
+/**
+ * PERFORMANCE TEST SCRIPT - SEGURIDAD V9 (REFACTORIZADO)
+ * -----------------------------------------------------
+ */
 
-const ec = new EC('secp256k1');
-const FETCH_TIMEOUT = 30000; // Aumentado a 30s para evitar AbortErrors en picos de carga
+const ec = new EC(CryptoCurve.SECP256K1);
+const FETCH_TIMEOUT = 30000;
 const LOG_FILE = path.join(process.cwd(), 'performance_errors.log');
 
 if (fs.existsSync(LOG_FILE)) fs.unlinkSync(LOG_FILE);
 
+const SERVER_RSA_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnJVond8ty13vMS9XyEVu
+/LQ8okK3OzH/FHzQfsOI1x+bKFyL+uXSg/sTTboBbohQaqvn/podnXzzlwG5htAS
+9nwhYB/DUf7JJfmlgUw+99etXbgv52DUR4GEEoId092giNWIyLPPD3hkaelAwGUp
+T4QT0aBGa2bOeoSNydHXK12SETdLYaI5nbQzvwHrHo4EkUlkAm4MivLD5gjCGO8s
+qEkFMOl/6srYw24HPVTLu5ltBe+Dyk8oeiDMpFoZWlo0I/AyRJAdQCMvD2MDd4s4
+ikJLwI37pQeZjEqWnC3oh3xv7hysZ88V4URZmpK8BhLFMbt0TEpwwEWpCIUiNF/c
+EQIDAQAB
+-----END PUBLIC KEY-----`;
+
 interface MetricBlock {
-    latencies: number[];
+    total: number[];
+    network: number[];
+    local: number[];
     success: number;
     fail: number;
-}
-
-interface CryptoMetrics {
-    keyGen: number[];
-    encryption: number[];
-    decryption: number[];
-}
-
-interface ResourceMetrics {
-    cpuStart: NodeJS.CpuUsage;
-    memPeak: number;
 }
 
 interface Metrics {
@@ -36,295 +41,298 @@ interface Metrics {
     endTime: number;
     handshake: MetricBlock;
     process: MetricBlock;
-    crypto: CryptoMetrics;
-    resource: ResourceMetrics;
+    crypto: {
+        rsaEnc: number[];
+        rsaDec: number[];
+        aesEnc: number[];
+        aesDec: number[];
+        hkdf: number[];
+        s256Gen: number[];
+        s256Derive: number[];
+        x255Gen: number[];
+        x255Derive: number[];
+    };
 }
 
 const metrics: Metrics = {
     startTime: 0,
     endTime: 0,
-    handshake: { latencies: [], success: 0, fail: 0 },
-    process: { latencies: [], success: 0, fail: 0 },
-    crypto: { keyGen: [], encryption: [], decryption: [] },
-    resource: {
-        cpuStart: process.cpuUsage(),
-        memPeak: 0
+    handshake: { total: [], network: [], local: [], success: 0, fail: 0 },
+    process: { total: [], network: [], local: [], success: 0, fail: 0 },
+    crypto: {
+        rsaEnc: [],
+        rsaDec: [],
+        aesEnc: [],
+        aesDec: [],
+        hkdf: [],
+        s256Gen: [],
+        s256Derive: [],
+        x255Gen: [],
+        x255Derive: []
     }
 };
 
-function trackMemory() {
-    const mem = process.memoryUsage().rss;
-    if (mem > metrics.resource.memPeak) metrics.resource.memPeak = mem;
+function logError(msg: string) {
+    fs.appendFileSync(LOG_FILE, `[${new Date().toISOString()}] ${msg}\n`);
 }
 
-function logError(type: string, userId: string, message: string, detail?: any, error?: Error | any) {
-    const timestamp = new Date().toISOString();
-    let logEntry = `--------------------------------------------------------------------------------\n`;
-    logEntry += `[${timestamp}] [${type}] [User: ${userId}]\n`;
-    logEntry += `MESSAGE: ${message}\n`;
-
-    if (detail) {
-        logEntry += `CONTEXT/RESPONSE BODY: ${typeof detail === 'string' ? detail : JSON.stringify(detail, null, 2)}\n`;
-    }
-
-    if (error) {
-        if (error.stack) {
-            logEntry += `STACK TRACE:\n${error.stack}\n`;
-        } else if (typeof error === 'object') {
-            logEntry += `ERROR OBJ: ${JSON.stringify(error, null, 2)}\n`;
-        }
-    }
-
-    logEntry += `--------------------------------------------------------------------------------\n\n`;
-    fs.appendFileSync(LOG_FILE, logEntry);
-}
-
-const pemToHex = (pem: string) => {
-    const key = nodeCrypto.createPublicKey(pem);
-    const jwk = key.export({ format: 'jwk' });
-    const x = Buffer.from(jwk.x!, 'base64url').toString('hex');
-    const y = Buffer.from(jwk.y!, 'base64url').toString('hex');
-    return '04' + x.padStart(64, '0') + y.padStart(64, '0');
+const encryptRSAPublic = (publicKey: string, data: string) => {
+    const start = performance.now();
+    const res = nodeCrypto.publicEncrypt({
+        key: publicKey,
+        padding: nodeCrypto.constants.RSA_PKCS1_OAEP_PADDING,
+        oaepHash: CRYPTO.HASH_ALGORITHM
+    }, Buffer.from(data, Encoding.UTF8)).toString(Encoding.BASE64);
+    metrics.crypto.rsaEnc.push(performance.now() - start);
+    return res;
 };
 
-const hexToPem = (publicKeyHex: string) => {
+const decryptRSAPublic = (publicKey: string, base64: string) => {
     const start = performance.now();
-    const key = ec.keyFromPublic(publicKeyHex, 'hex');
-    const pub = key.getPublic();
-    const x = Buffer.from(pub.getX().toArray('be', 32)).toString('base64url');
-    const y = Buffer.from(pub.getY().toArray('be', 32)).toString('base64url');
-    const jwk = { kty: 'EC', crv: 'secp256k1', x, y };
-    const keyObject = nodeCrypto.createPublicKey({ key: jwk as any, format: 'jwk' });
-    const pem = keyObject.export({ type: 'spki', format: 'pem' }) as string;
-    // No trackeamos hexToPem por separado, se incluye en el flujo
-    return pem;
+    const res = nodeCrypto.publicDecrypt({
+        key: publicKey,
+        padding: nodeCrypto.constants.RSA_PKCS1_PADDING
+    }, Buffer.from(base64, Encoding.BASE64)).toString(Encoding.UTF8);
+    metrics.crypto.rsaDec.push(performance.now() - start);
+    return res;
 };
 
-const encryptB64 = (keyHex: string, plaintext: string) => {
+const encryptAES = (key: Buffer, plaintext: string) => {
     const start = performance.now();
-    const iv = nodeCrypto.randomBytes(12);
-    const cipher = nodeCrypto.createCipheriv('aes-256-gcm', Buffer.from(keyHex, 'hex'), iv);
-    let payload = cipher.update(plaintext, 'utf8');
+    const iv = nodeCrypto.randomBytes(CRYPTO.IV_BYTES);
+    const cipher = nodeCrypto.createCipheriv(CRYPTO.ENCRYPTION_ALGORITHM, key, iv);
+    let payload = cipher.update(plaintext, Encoding.UTF8);
     payload = Buffer.concat([payload, cipher.final()]);
     const tag = cipher.getAuthTag();
-    const result = Buffer.concat([iv, tag, payload]).toString('base64');
-    metrics.crypto.encryption.push(performance.now() - start);
-    return result;
+    const res = Buffer.concat([iv, tag, payload]).toString(Encoding.BASE64);
+    metrics.crypto.aesEnc.push(performance.now() - start);
+    return res;
 };
 
-const decryptB64 = (keyHex: string, base64: string) => {
+const decryptAES = (key: Buffer, base64: string) => {
     const start = performance.now();
-    const buffer = Buffer.from(base64, 'base64');
-    const iv = buffer.subarray(0, 12);
-    const tag = buffer.subarray(12, 28);
-    const payload = buffer.subarray(28);
-    const decipher = nodeCrypto.createDecipheriv('aes-256-gcm', Buffer.from(keyHex, 'hex'), iv);
+    const buffer = Buffer.from(base64, Encoding.BASE64);
+    const iv = buffer.subarray(0, CRYPTO.IV_BYTES);
+    const tag = buffer.subarray(CRYPTO.IV_BYTES, CRYPTO.IV_BYTES + CRYPTO.TAG_BYTES);
+    const payload = buffer.subarray(CRYPTO.IV_BYTES + CRYPTO.TAG_BYTES);
+    const decipher = nodeCrypto.createDecipheriv(CRYPTO.ENCRYPTION_ALGORITHM, key, iv);
     decipher.setAuthTag(tag);
-    let decrypted = decipher.update(payload, undefined, 'utf8');
-    decrypted += decipher.final('utf8');
-    metrics.crypto.decryption.push(performance.now() - start);
+    let decrypted = decipher.update(payload, undefined, Encoding.UTF8);
+    decrypted += decipher.final(Encoding.UTF8);
+    metrics.crypto.aesDec.push(performance.now() - start);
     return decrypted;
 };
 
-async function executeProcessRequest(baseUrl: string, deviceId: string, kid: string, ssP: string, backendEphPEM: string) {
-    const start = Date.now();
+async function executeProcessRequest(baseUrl: string, deviceId: string, kid: string, primarySecret: Buffer, backendEphHex: string) {
+    const totalStart = performance.now();
+    let netDuration = 0;
+
     try {
-        const startKG = performance.now();
-        const clientEphemeral = ec.genKeyPair();
-        metrics.crypto.keyGen.push(performance.now() - startKG);
+        const startEphGen = performance.now();
+        const clientEphPair = nodeCrypto.generateKeyPairSync(CryptoCurve.X25519);
+        const clientEphHex = Buffer.from((clientEphPair.publicKey.export({ format: 'jwk' }) as any).x, Encoding.BASE64URL).toString(Encoding.HEX);
+        metrics.crypto.x255Gen.push(performance.now() - startEphGen);
 
-        const encClientEph = encryptB64(ssP, hexToPem(clientEphemeral.getPublic(true, 'hex')));
+        const encClientEph = encryptAES(primarySecret, clientEphHex);
 
-        const ssE = clientEphemeral.derive(ec.keyFromPublic(pemToHex(backendEphPEM), 'hex').getPublic()).toString(16).padStart(64, '0');
-        const km = nodeCrypto.createHash('sha256').update(Buffer.from(ssP, 'hex')).update(Buffer.from(ssE, 'hex')).digest('hex');
+        const plaintext = JSON.stringify({ action: "test", data: "perf-check", nonce: uuidv4() });
+        const startSSE = performance.now();
 
-        const message = JSON.stringify({ action: "perf_test", ts: Date.now() });
-        const encData = encryptB64(km, message);
+        // El secreto compartido se calcula con la privada local y la pública remota (backend)
+        const backendEphPubKey = nodeCrypto.createPublicKey({
+            key: { kty: 'OKP', crv: 'X25519', x: Buffer.from(backendEphHex, Encoding.HEX).toString(Encoding.BASE64URL) },
+            format: 'jwk'
+        });
 
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
+        const ssE = nodeCrypto.diffieHellman({
+            privateKey: clientEphPair.privateKey,
+            publicKey: backendEphPubKey
+        });
+        metrics.crypto.x255Derive.push(performance.now() - startSSE);
 
+        const startHKDF = performance.now();
+        const km = nodeCrypto.hkdfSync(CRYPTO.HASH_ALGORITHM, Buffer.concat([primarySecret, ssE]), Buffer.from(deviceId), CRYPTO.HKDF_INFO_MESSAGE, 32);
+        const kmBuffer = Buffer.from(km);
+        metrics.crypto.hkdf.push(performance.now() - startHKDF);
+
+        const encData = encryptAES(kmBuffer, plaintext);
+
+        const netStart = performance.now();
+        const ctrl = new AbortController();
+        const timeout = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT);
         const response = await fetch(`${baseUrl}/httpTriggerProcess`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ deviceId, kid, publicKeyEphemeral: encClientEph, encryptedData: encData }),
-            signal: controller.signal
+            signal: ctrl.signal
         });
-        clearTimeout(timeoutId);
 
         if (!response.ok) {
-            const errorBody = await response.text();
-            throw { message: `Server error ${response.status}`, body: errorBody };
+            netDuration = performance.now() - netStart;
+            metrics.process.network.push(netDuration);
+            const errBody = await response.text();
+            throw new Error(`Process error ${response.status}: ${errBody}`);
         }
 
         const data = await response.json();
+        netDuration = performance.now() - netStart;
+        metrics.process.network.push(netDuration);
+        clearTimeout(timeout);
 
-        const nextBackendEphPEM = decryptB64(ssP, data.publicKeyEphemeral);
+        const decryptedPayload = decryptAES(kmBuffer, data.encryptedData);
+        const nextEphHex = decryptAES(primarySecret, data.publicKeyEphemeral);
 
-        metrics.process.latencies.push(Date.now() - start);
+        const totalExec = performance.now() - totalStart;
+        metrics.process.total.push(totalExec);
+        metrics.process.local.push(totalExec - netDuration);
         metrics.process.success++;
-
-        trackMemory();
-
-        return {
-            nextKid: data.kid,
-            nextBackendEphPEM: nextBackendEphPEM
-        };
+        return { nextKid: data.kid, nextEphHex };
     } catch (error: any) {
+        logError(`Process Error: ${error.message}`);
         metrics.process.fail++;
-        logError('PROCESS', deviceId, error.message || 'Unknown Error', error.body || { kid }, error);
         return null;
     }
 }
 
-async function runVirtualUser(userId: number, requestsPerUserTotal: number, totalDurationSeconds: number, baseUrl: string) {
-    const NAMESPACE = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
-    const deviceId = uuidv5(uuidv4(), NAMESPACE);
+async function executeHandshake(baseUrl: string, deviceId: string) {
+    const totalStart = performance.now();
+    let netDuration = 0;
 
-    const handshakesCount = Math.floor(Math.random() * 3) + 1;
-    const reqsPerHS = Math.floor(requestsPerUserTotal / handshakesCount);
-    const delay = (totalDurationSeconds * 1000) / requestsPerUserTotal;
+    try {
+        const startS256Gen = performance.now();
+        const clientPrimary = ec.genKeyPair();
+        const pubPrimaryHex = clientPrimary.getPublic(true, Encoding.HEX);
+        metrics.crypto.s256Gen.push(performance.now() - startS256Gen);
 
-    for (let h = 0; h < handshakesCount; h++) {
-        try {
-            const startHS = Date.now();
+        const hsRequest = {
+            deviceId: deviceId,
+            publicKeyPrimary: encryptRSAPublic(SERVER_RSA_PUBLIC_KEY, pubPrimaryHex)
+        };
 
-            const startKG = performance.now();
-            const clientPrimary = ec.genKeyPair();
-            metrics.crypto.keyGen.push(performance.now() - startKG);
+        const netStart = performance.now();
+        const ctrl = new AbortController();
+        const timeout = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT);
+        const response = await fetch(`${baseUrl}/httpTriggerHandsheck`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(hsRequest),
+            signal: ctrl.signal
+        });
 
-            const hsRequest = { deviceId, publicKeyPrimary: hexToPem(clientPrimary.getPublic(true, 'hex')) };
-
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
-            const hsResponse = await fetch(`${baseUrl}/httpTriggerHandsheck`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(hsRequest),
-                signal: controller.signal
-            });
-            clearTimeout(timeoutId);
-
-            if (!hsResponse.ok) {
-                const body = await hsResponse.text();
-                throw { message: `Handshake Fail ${hsResponse.status}`, body };
-            }
-            const hsData = await hsResponse.json();
-
-            metrics.handshake.latencies.push(Date.now() - startHS);
-            metrics.handshake.success++;
-
-            const ssP = clientPrimary.derive(ec.keyFromPublic(pemToHex(hsData.publicKeyPrimary), 'hex').getPublic()).toString(16).padStart(64, '0');
-
-            let currentKid = hsData.kid;
-            let currentBackendEphPEM = hsData.publicKeyEphemeral;
-            const remaining = (h === handshakesCount - 1) ? requestsPerUserTotal - (h * reqsPerHS) : reqsPerHS;
-
-            const parallelCount = Math.floor(remaining / 2);
-            const sequentialCount = remaining - parallelCount;
-
-            const parallelPool = Array.from({ length: parallelCount }).map(async () => {
-                await new Promise(r => setTimeout(r, Math.random() * delay));
-                return executeProcessRequest(baseUrl, deviceId, currentKid, ssP, currentBackendEphPEM);
-            });
-
-            const parallelResults = await Promise.all(parallelPool);
-            const lastSuccess = parallelResults.reverse().find(r => r !== null);
-            if (lastSuccess) {
-                currentKid = lastSuccess.nextKid;
-                currentBackendEphPEM = lastSuccess.nextBackendEphPEM;
-            }
-
-            for (let i = 0; i < sequentialCount; i++) {
-                await new Promise(r => setTimeout(r, delay));
-                const result = await executeProcessRequest(baseUrl, deviceId, currentKid, ssP, currentBackendEphPEM);
-                if (result) {
-                    currentKid = result.nextKid;
-                    currentBackendEphPEM = result.nextBackendEphPEM;
-                } else {
-                    break;
-                }
-            }
-
-            trackMemory();
-
-        } catch (error: any) {
-            metrics.handshake.fail++;
-            logError('HANDSHAKE_FLOW', deviceId, error.message || 'Unknown Error', error.body || { h }, error);
+        if (!response.ok) {
+            netDuration = performance.now() - netStart;
+            metrics.handshake.network.push(netDuration);
+            const errBody = await response.text();
+            throw new Error(`Handshake Fail ${response.status}: ${errBody}`);
         }
+
+        const hsData = await response.json();
+        netDuration = performance.now() - netStart;
+        metrics.handshake.network.push(netDuration);
+        clearTimeout(timeout);
+
+        const backendPubHex = decryptRSAPublic(SERVER_RSA_PUBLIC_KEY, hsData.publicKeyPrimary);
+        const backendEphHex = decryptRSAPublic(SERVER_RSA_PUBLIC_KEY, hsData.publicKeyEphemeral);
+
+        const startS256SS = performance.now();
+        const ssP = Buffer.from(clientPrimary.derive(ec.keyFromPublic(backendPubHex, Encoding.HEX).getPublic()).toArray('be', 32));
+        metrics.crypto.s256Derive.push(performance.now() - startS256SS);
+
+        const totalExec = performance.now() - totalStart;
+        metrics.handshake.total.push(totalExec);
+        metrics.handshake.local.push(totalExec - netDuration);
+        metrics.handshake.success++;
+
+        return { kid: hsData.kid, ssP, backendEphHex };
+    } catch (error: any) {
+        logError(`Handshake Error: ${error.message}`);
+        metrics.handshake.fail++;
+        return null;
     }
 }
 
 async function runTest() {
     const args = process.argv.slice(2);
-    const USERS = parseInt(args[args.indexOf('--users') + 1]) || 10;
-    const TOTAL_REQUESTS = parseInt(args[args.indexOf('--requests') + 1]) || 100;
-    const DURATION_SECONDS = parseInt(args[args.indexOf('--seconds') + 1]) || 5;
-    const baseUrl = 'https://handsheck-d0dshcd5bfh2g7bm.centralus-01.azurewebsites.net/api';
+    const usersCount = parseInt(args[args.indexOf('--users') + 1]) || 1;
+    const requestsPerUser = parseInt(args[args.indexOf('--requests') + 1]) || 5;
+    const baseUrl = 'http://localhost:3000/api';
 
-    console.log('\x1b[36m%s\x1b[0m', '--- INICIANDO PRUEBA DE CARGA (LOGIC V5 - AVANCED) ---');
-    console.log(`Configuración: ${USERS} usuarios concurrentes, ${TOTAL_REQUESTS} peticiones totales`);
+    console.log(`\x1b[1m%s\x1b[0m`, `--- INICIANDO PRUEBA RENDIMIENTO V9 (REFACTORIZADO) ---`);
+    console.log(`Configuración: Usuarios=${usersCount}, Peticiones/Usuario=${requestsPerUser}`);
+    console.log(`Endpoint: ${baseUrl}\n`);
 
-    const requestsPerUser = Math.floor(TOTAL_REQUESTS / USERS);
-    metrics.startTime = Date.now();
+    metrics.startTime = performance.now();
 
-    const PromiseUsers = Array.from({ length: USERS }).map((_, i) => runVirtualUser(i, requestsPerUser, DURATION_SECONDS, baseUrl));
+    const userTasks = Array.from({ length: usersCount }).map(async (_, i) => {
+        const deviceId = uuidv5(`user-${i}`, '6ba7b810-9dad-11d1-80b4-00c04fd430c8');
 
-    await Promise.all(PromiseUsers);
+        const hsResult = await executeHandshake(baseUrl, deviceId);
+        if (!hsResult) return;
 
-    metrics.endTime = Date.now();
+        let { kid, ssP, backendEphHex } = hsResult;
+
+        for (let j = 0; j < requestsPerUser; j++) {
+            const procResult = await executeProcessRequest(baseUrl, deviceId, kid, ssP, backendEphHex);
+            if (!procResult) break;
+            kid = procResult.nextKid;
+            backendEphHex = procResult.nextEphHex;
+        }
+    });
+
+    await Promise.all(userTasks);
+    metrics.endTime = performance.now();
+
     printResults();
-}
-
-function printBlockMetrics(name: string, block: MetricBlock) {
-    const sorted = block.latencies.sort((a, b) => a - b);
-    const min = sorted.length ? sorted[0] : 0;
-    const max = sorted.length ? sorted[sorted.length - 1] : 0;
-    const avg = sorted.length ? (sorted.reduce((a, b) => a + b, 0) / sorted.length).toFixed(2) : 0;
-
-    console.log(`\n\x1b[33m[${name.toUpperCase()}]\x1b[0m`);
-    console.log(`  Exitosas: ${block.success} | Fallidas: ${block.fail}`);
-    console.log(`  Latencia: Min: ${min}ms | Avg: ${avg}ms | Max: ${max}ms`);
-}
-
-function printCryptoMetrics(name: string, lats: number[]) {
-    const sorted = lats.sort((a, b) => a - b);
-    const min = sorted.length ? sorted[0].toFixed(3) : '0';
-    const max = sorted.length ? sorted[sorted.length - 1].toFixed(3) : '0';
-    const avg = sorted.length ? (sorted.reduce((a, b) => a + b, 0) / sorted.length).toFixed(3) : '0';
-    console.log(`  ${name.padEnd(8)}: Min: ${min}ms | Avg: ${avg}ms | Max: ${max}ms`);
 }
 
 function printResults() {
     const duration = (metrics.endTime - metrics.startTime) / 1000;
-    const cpuEnd = process.cpuUsage(metrics.resource.cpuStart);
-    const totalCpuTime = (cpuEnd.user + cpuEnd.system) / 1000; // ms
 
-    console.log('\n\x1b[32m%s\x1b[0m', '--- RESULTADOS DE RENDIMIENTO ---');
-    console.log(`Tiempo Total: ${duration.toFixed(2)}s`);
+    const getStats = (arr: number[]) => {
+        if (arr.length === 0) return { min: "0.000", avg: "0.000", max: "0.000" };
+        const min = Math.min(...arr).toFixed(3);
+        const max = Math.max(...arr).toFixed(3);
+        const avg = (arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(3);
+        return { min, avg, max };
+    };
 
-    printBlockMetrics('Handshake (Network)', metrics.handshake);
-    printBlockMetrics('Process (Network)', metrics.process);
+    const fmt = (s: { min: string, avg: string, max: string }) =>
+        `Min: ${s.min.padStart(8)} | Avg: ${s.avg.padStart(8)} | Max: ${s.max.padStart(8)}`;
 
-    console.log(`\n\x1b[35m[CLIENT CRYPTO OVERHEAD]\x1b[0m`);
-    printCryptoMetrics('KeyGen', metrics.crypto.keyGen);
-    printCryptoMetrics('Encrypt', metrics.crypto.encryption);
-    printCryptoMetrics('Decrypt', metrics.crypto.decryption);
+    console.log(`\n\x1b[1m\x1b[36m%s\x1b[0m`, `--- RESULTADOS FINALES ---`);
+    console.log(`Tiempo Total Ejecución: ${duration.toFixed(2)}s`);
 
-    console.log(`\n\x1b[34m[RESOURCE CONSUMPTION]\x1b[0m`);
-    console.log(`  CPU Usage: ${(totalCpuTime / (duration * 1000) * 100).toFixed(2)}% (User: ${cpuEnd.user / 1000}ms, Sys: ${cpuEnd.system / 1000}ms)`);
-    console.log(`  Memory Peak (RSS): ${(metrics.resource.memPeak / 1024 / 1024).toFixed(2)} MB`);
+    console.log(`\n\x1b[33m%s\x1b[0m`, `>> FLUJO DE RED Y PROCESAMIENTO LOCAL (Ms):`);
+    console.log(`[Handshake]`);
+    console.log(`  Enviadas: ${metrics.handshake.success + metrics.handshake.fail} | Éxito: ${metrics.handshake.success} | Fallo: ${metrics.handshake.fail}`);
+    console.log(`  Red   | ${fmt(getStats(metrics.handshake.network))}`);
+    console.log(`  Local | ${fmt(getStats(metrics.handshake.local))}`);
+    console.log(`  TOTAL | ${fmt(getStats(metrics.handshake.total))}`);
 
-    const totalSuccess = metrics.handshake.success + metrics.process.success;
-    const totalFail = metrics.handshake.fail + metrics.process.fail;
+    console.log(`[Process]`);
+    console.log(`  Enviadas: ${metrics.process.success + metrics.process.fail} | Éxito: ${metrics.process.success} | Fallo: ${metrics.process.fail}`);
+    console.log(`  Red   | ${fmt(getStats(metrics.process.network))}`);
+    console.log(`  Local | ${fmt(getStats(metrics.process.local))}`);
+    console.log(`  TOTAL | ${fmt(getStats(metrics.process.total))}`);
 
-    console.log(`\n\x1b[36m[RESUMEN GENERAL]\x1b[0m`);
-    console.log(`  Total OK: ${totalSuccess} | Total FALLO: ${totalFail}`);
-    console.log(`  Throughput Global: ${(totalSuccess / duration).toFixed(2)} req/s`);
+    console.log(`\n\x1b[35m%s\x1b[0m`, `>> DESGLOSE CRIPTOGRÁFICO DETALLADO (Ms):`);
 
-    if (totalFail > 0) {
-        console.log(`\n\x1b[31m%s\x1b[0m`, `DETALLE DE ERRORES GUARDADO EN: performance_errors.log`);
-    }
+    console.log(`RSA Encrypt     | ${fmt(getStats(metrics.crypto.rsaEnc))}`);
+    console.log(`RSA Decrypt     | ${fmt(getStats(metrics.crypto.rsaDec))}`);
+    console.log(`AES-GCM Encrypt | ${fmt(getStats(metrics.crypto.aesEnc))}`);
+    console.log(`AES-GCM Decrypt | ${fmt(getStats(metrics.crypto.aesDec))}`);
+    console.log(`HKDF SHA-256    | ${fmt(getStats(metrics.crypto.hkdf))}`);
+    console.log(`SECP256K1 Gen   | ${fmt(getStats(metrics.crypto.s256Gen))}`);
+    console.log(`SECP256K1 SS    | ${fmt(getStats(metrics.crypto.s256Derive))}`);
+    console.log(`X25519 Gen      | ${fmt(getStats(metrics.crypto.x255Gen))}`);
+    console.log(`X25519 SS       | ${fmt(getStats(metrics.crypto.x255Derive))}`);
+
+    console.log(`\n\x1b[1m\x1b[32m%s\x1b[0m`, `--- PRUEBA FINALIZADA ---`);
 }
 
-runTest().catch(err => console.error('Fatal Error:', err));
+runTest().then(() => {
+    process.exit(0);
+}).catch(err => {
+    console.error(err);
+    process.exit(1);
+});
