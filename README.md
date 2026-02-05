@@ -16,9 +16,76 @@ npm install
 ```
 
 ### Ejecutar Localmente
+Para ejecutar el servidor en modo desarrollo o producción localmente:
+
 ```bash
+# Modo Desarrollo (con recarga automática)
+npm run dev
+
+# Modo Producción
 npm run build
 npm start
+```
+
+## ⚙️ Configuración (.env)
+
+El sistema requiere las siguientes variables de entorno configuradas en un archivo `.env` en la raíz del proyecto para funcionar correctamente.
+
+| Variable | Descripción | Ejemplo / Notas |
+|----------|-------------|-----------------|
+| `PORT` | Puerto donde escuchará el servidor | `3000` |
+| `AKV_VAULT_URL` | URL del Azure Key Vault | `https://mi-vault.vault.azure.net` |
+| `AKV_MASTER_KEY_NAME` | Nombre de la clave maestra (ECC) en KV | `master-ecc` |
+| `AKV_RSA_KEY_NAME` | (Opcional) Nombre de la clave RSA en KV | `rsa-key` (si difiere de la maestra) |
+| `RSA_PRIVATE_KEY` | Ruta al archivo `.pem` o contenido de la clave privada | `./keys/rsa.key` o `-----BEGIN...` |
+| `REDIS_CONNECTION_STRING` | Cadena de conexión a Redis | `redis://:pass@host:6379` |
+| `BASE_URL` | URL base pública del servicio | `https://api.midominio.com` |
+
+> **Nota sobre `RSA_PRIVATE_KEY`**: Para entornos de producción (Docker/K8s), se recomienda montar la clave como un archivo (Secret) y apuntar esta variable a la ruta del archivo (ej: `/app/keys/private.key`).
+
+## 🐳 Despliegue con Docker y Kubernetes
+
+### Docker Build & Run
+
+```bash
+# Construir la imagen (multi-platform si es necesario)
+docker build -t pragmaregistry.azurecr.io/aura-ecdh:v1 .
+
+# Ejecutar contenedor (ejemplo con env file)
+docker run -p 3000:3000 --env-file .env pragmaregistry.azurecr.io/aura-ecdh:v1
+```
+
+### Despliegue en AKS (Kubernetes)
+
+El repositorio incluye manifiestos en la carpeta `k8s/` para desplegar en Azure Kubernetes Service.
+
+1. **Crear ConfigMap**:
+```bash
+kubectl create configmap app-config \
+  --from-literal=vault-url="https://<TU-VAULT>.vault.azure.net" \
+  --from-literal=master-key-name="master-ecc" \
+  --dry-run=client -o yaml | kubectl apply -f -
+```
+
+2. **Crear Secretos (Redis & RSA)**:
+```bash
+# Secreto para Redis
+kubectl create secret generic app-secrets \
+  --from-literal=redis-connection="redis://..." \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+# Secreto para Clave RSA (desde archivo)
+kubectl create secret generic app-rsa-key \
+  --from-file=private-key=./rsa.key \
+  --dry-run=client -o yaml | kubectl apply -f -
+```
+
+3. **Aplicar Despliegue**:
+```bash
+kubectl apply -f k8s/deployment.yaml
+
+# Reiniciar pods si cambian configuraciones
+kubectl rollout restart deployment aura-ecdh
 ```
 
 ---
