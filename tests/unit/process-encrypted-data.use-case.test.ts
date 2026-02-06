@@ -1,7 +1,8 @@
 import { ProcessEncryptedData } from '../../src/application/use-cases/process-encrypted-data.use-case';
 import { ICryptoProvider } from '../../src/domain/interfaces/crypto-provider.interface';
 import { ISessionRepository } from '../../src/domain/interfaces/session-repository.interface';
-import { Encoding, ERROR_MESSAGES } from '../../src/config/constants';
+import { Encoding } from '../../src/config/constants';
+import { ERROR_MESSAGES } from '../../src/config/string-constants';
 
 jest.mock('uuid', () => ({ v4: () => 'new-mocked-kid' }));
 
@@ -72,7 +73,7 @@ describe('ProcessEncryptedData Use Case', () => {
 
         mockCryptoProvider.encryptAESGCM.mockImplementation((key, plaintext) => {
             if (key === 'km-hex') return { payload: 'res-hex', iv: 'iv-res-hex', tag: 'tag-res-hex' };
-            if (key === 'primary-secret-hex' && plaintext === 'next-pub-pem') return { payload: 'next-eph-hex', iv: 'iv-next-hex', tag: 'tag-next-hex' };
+            if (key === 'primary-secret-hex' && plaintext === 'next-pub') return { payload: 'next-eph-hex', iv: 'iv-next-hex', tag: 'tag-next-hex' };
             return { payload: '', iv: '', tag: '' };
         });
 

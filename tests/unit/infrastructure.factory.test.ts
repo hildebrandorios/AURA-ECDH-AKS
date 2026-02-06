@@ -14,8 +14,8 @@ describe('InfrastructureFactory (Unit)', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         process.env = { ...originalEnv };
-        process.env.ECC_PRIVATE_KEY = '04...';
-        process.env.RSA_PRIVATE_KEY = 'mock-private-key';
+        process.env.ECC_PRIVATE_KEY = '-----BEGIN PRIVATE KEY-----\n04...\n-----END PRIVATE KEY-----';
+        process.env.RSA_PRIVATE_KEY = '-----BEGIN RSA PRIVATE KEY-----\nmock-private-key\n-----END RSA PRIVATE KEY-----';
         process.env.REDIS_CONNECTION_STRING = 'redis://localhost';
 
         // Reset singleton instances via reflection/access
@@ -41,7 +41,10 @@ describe('InfrastructureFactory (Unit)', () => {
         const service2 = InfrastructureFactory.getIdentityService();
         expect(service1).toBeDefined();
         expect(service1).toBe(service2);
-        expect(LocalKeyAdapter).toHaveBeenCalledWith('04...', 'mock-private-key');
+        expect(LocalKeyAdapter).toHaveBeenCalledWith(
+            '-----BEGIN PRIVATE KEY-----\n04...\n-----END PRIVATE KEY-----',
+            '-----BEGIN RSA PRIVATE KEY-----\nmock-private-key\n-----END RSA PRIVATE KEY-----'
+        );
     });
 
     it('should provide a RedisSessionRepository and reuse the instance', () => {

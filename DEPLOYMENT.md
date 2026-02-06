@@ -14,8 +14,8 @@ The application requires the following environment variables. In the provided `k
 | `PORT` | The port the application runs on (default: 3000) |
 | `BASE_URL` | Application base URL |
 | `REDIS_CONNECTION_STRING` | Connection string for Redis |
-| `ECC_PUBLIC_KEY` | Hex or PEM string of the ECC Public Key used for entropy |
-| `RSA_PRIVATE_KEY` | PEM string of the RSA Private Key for decryption/signing |
+| `ECC_PRIVATE_KEY` | PEM string or file path to the ECC Private Key (used for entropy) |
+| `RSA_PRIVATE_KEY` | PEM string or file path to the RSA Private Key for decryption/signing |
 
 ## Steps to Deploy
 
@@ -72,3 +72,10 @@ To update the application:
    ```bash
    kubectl set image deployment/aura-ecdh aura-ecdh=your-registry.azurecr.io/aura-ecdh:vn
    ```
+
+## Hot-Reload of Keys
+The application supports **hot-reloading** of ECC and RSA keys when they are provided as file paths (e.g., in Kubernetes Secrets).
+
+- **Detection**: Changes are detected using OS events (`fs.watch`).
+- **Zero-Downtime**: When a Kubernetes Secret is updated, the application will automatically reload the new key content without requiring a pod restart.
+- **Resilience**: If a reload fails (e.g., invalid PEM during update), the application will keep the previous valid key in memory and log the error.

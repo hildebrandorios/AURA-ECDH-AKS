@@ -3,10 +3,9 @@ kind: Service
 metadata:
   name: aura-ecdh-service
 spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 3000
   selector:
     app: aura-ecdh
-  ports:
-    - protocol: TCP
-      port: 80
-      targetPort: 3000
-  type: ClusterIP

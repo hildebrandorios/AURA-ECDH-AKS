@@ -7,7 +7,7 @@
     "watch": "tsc -w",
     "clean": "rimraf dist",
     "prestart": "npm run clean && npm run build",
-    "start": "node dist/src/server.js",
+    "start": "node dist/server.js",
     "dev": "tsx watch src/server.ts",
     "test": "jest",
     "test:unit": "jest --selectProjects unit",
@@ -35,5 +35,5 @@
     "tsx": "^4.21.0",
     "typescript": "^5.4.3"
   },
-  "main": "dist/src/server.js"
+  "main": "dist/server.js"
 }

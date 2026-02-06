@@ -62,18 +62,6 @@ export const CRYPTO = {
     TAG_BYTES: 16,
 } as const;
 
-/**
- * Centralized Error Messages
- */
-export const ERROR_MESSAGES = {
-    INVALID_SESSION: "401: Invalid session or device",
-    MISSING_FIELDS: "Missing required fields (deviceId, publicKeyPrimary)",
-    INTERNAL_ERROR: "Internal Server Error",
-    UNAUTHORIZED: "Unauthorized access",
-    HANDSHAKE_FAILED: "Handshake process failed",
-    DECRYPTION_FAILED: "Decryption failed",
-    KEY_ERROR: "Key service error", // Renamed from KEY_VAULT_ERROR
-} as const;
 
 /**
  * Time-to-live (TTL) constants in seconds
@@ -104,4 +92,23 @@ export const ENV_KEYS = {
     REDIS_CONNECTION: 'REDIS_CONNECTION_STRING' as const,
     PORT: 'PORT' as const,
     BASE_URL: 'BASE_URL' as const,
+} as const;
+
+/**
+ * Common regex and validation limits
+ */
+export const VALIDATION = {
+    UUID: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+    PUBKEY_MIN_LENGTH: 50,
+    BASE64_REGEX: /^[A-Za-z0-9+/=]+$/,
+    PEM_MARKER: '-----BEGIN'
+} as const;
+
+/**
+ * Server Configuration
+ */
+export const SERVER_CONFIG = {
+    DEFAULT_PORT: 3000,
+    CONNECTION_TIMEOUT: 30000,
+    WATCHER_DEBOUNCE_MS: 200,
 } as const;

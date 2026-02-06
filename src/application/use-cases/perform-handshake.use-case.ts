@@ -1,4 +1,4 @@
-import { CRYPTO, CryptoCurve, REDIS_KEYS, TTL, Encoding } from "../../config/constants";
+import { CRYPTO, CryptoCurve, REDIS_KEYS, TTL } from "../../config/constants";
 import { ICryptoProvider } from "../../domain/interfaces/crypto-provider.interface";
 import { IIdentityService } from "../../domain/interfaces/identity-service.interface";
 import { ISessionRepository } from "../../domain/interfaces/session-repository.interface";
@@ -14,21 +14,14 @@ export class PerformHandshake {
     ) { }
 
     public async execute(request: HandshakeRequestDTO): Promise<HandshakeResponseDTO> {
-        // 0. RSA Decrypt Fields
         const deviceId = request.deviceId;
         const publicKeyPrimary = await this.identityService.decryptRSA(request.publicKeyPrimary);
-
-        // 1. Get Entropy from Identity Service (Cached)
         const entropy = this.identityService.getEntropy();
 
-        // 2. Derive Primary Key (Identity-linked + Nonce)
         const primaryNonce = nodeCrypto.randomBytes(CRYPTO.NONCE_BYTES);
         const backendPrimaryPair = this.cryptoProvider.deriveKeyPairFromEntropy(entropy, primaryNonce);
-
-        // 3. Generate Ephemeral KeyPair (X25519)
         const backendEphemeralPair = this.cryptoProvider.generateKeyPair(CryptoCurve.X25519);
 
-        // 4. Compute Shared Secret (SECP256K1 for Primary)
         const sharedSecretPrimary = this.cryptoProvider.computeSharedSecret(
             backendPrimaryPair.privateKey,
             publicKeyPrimary,
@@ -36,8 +29,6 @@ export class PerformHandshake {
         );
 
         const kid = uuidv4();
-
-        // 5. Manage Session Uniqueness & Storage
         const oldKid = await this.sessionRepository.getLastKid(deviceId);
 
         if (oldKid) {
@@ -51,14 +42,11 @@ export class PerformHandshake {
             this.sessionRepository.storeLastKidMapping(deviceId, kid, ttl)
         ]);
 
-        const pubPHex = backendPrimaryPair.publicKey;
-        const pubEHex = backendEphemeralPair.publicKey;
-
         return {
-            publicKeyPrimary: this.identityService.encryptRSAPrivate(pubPHex),
-            publicKeyEphemeral: this.identityService.encryptRSAPrivate(pubEHex),
+            publicKeyPrimary: this.identityService.encryptRSAPrivate(backendPrimaryPair.publicKey),
+            publicKeyEphemeral: this.identityService.encryptRSAPrivate(backendEphemeralPair.publicKey),
             kid,
-            duration: 100
+            duration: 0
         };
     }
 }

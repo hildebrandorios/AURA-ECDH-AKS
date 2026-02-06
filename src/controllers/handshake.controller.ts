@@ -1,13 +1,13 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { HandshakeRequestDTO } from '../application/dtos/handshake.dto';
 import { InfrastructureFactory } from '../infrastructure/factories/infrastructure.factory';
-import { HttpStatus, ERROR_MESSAGES } from '../config/constants';
+import { HttpStatus, VALIDATION } from '../config/constants';
+import { STRINGS, ERROR_MESSAGES } from '../config/string-constants';
 
 export class HandshakeController {
-
     static async handle(request: FastifyRequest, reply: FastifyReply) {
         const start = Date.now();
-        request.log.info(`[Handshake] REQUEST START - url: ${request.url}`);
+        request.log.info(`${STRINGS.LOG_HANDSHAKE_START} ${request.url}`);
 
         try {
             const body = request.body as HandshakeRequestDTO;
@@ -20,19 +20,19 @@ export class HandshakeController {
                 });
             }
 
-            // Input Validation
-            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-            if (!uuidRegex.test(deviceId)) {
+            if (!VALIDATION.UUID.test(deviceId)) {
                 return reply.status(HttpStatus.BAD_REQUEST).send({
                     status: HttpStatus.BAD_REQUEST,
-                    body: "Invalid deviceId format. Must be UUID."
+                    body: STRINGS.ERR_INVALID_UUID
                 });
             }
 
-            if (publicKeyPrimary.length < 50 || (!publicKeyPrimary.includes('-----BEGIN') && !/^[A-Za-z0-9+/=]+$/.test(publicKeyPrimary))) {
+            const isPem = publicKeyPrimary.includes(VALIDATION.PEM_MARKER);
+            const isBase64 = VALIDATION.BASE64_REGEX.test(publicKeyPrimary);
+            if (publicKeyPrimary.length < VALIDATION.PUBKEY_MIN_LENGTH || (!isPem && !isBase64)) {
                 return reply.status(HttpStatus.BAD_REQUEST).send({
                     status: HttpStatus.BAD_REQUEST,
-                    body: "Invalid publicKeyPrimary format."
+                    body: STRINGS.ERR_INVALID_PUBKEY
                 });
             }
 
@@ -40,14 +40,13 @@ export class HandshakeController {
             const result = await useCase.execute({ deviceId, publicKeyPrimary });
 
             const duration = Date.now() - start;
-            request.log.info(`[Handshake] SUCCESS - Total Duration: ${duration}ms`);
+            request.log.info(`${STRINGS.LOG_HANDSHAKE_SUCCESS} ${duration}ms`);
             result.duration = duration;
 
             return reply.status(HttpStatus.OK).send(result);
 
-        } catch (error) {
-            request.log.error(`[Handshake] CRITICAL ERROR: ${(error as Error).message}`);
-            // Security: Return generic error to client, but log full details
+        } catch (error: any) {
+            request.log.error(`${STRINGS.LOG_CRITICAL} ${error.message}`);
             return reply.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
                 status: HttpStatus.INTERNAL_SERVER_ERROR,
                 error: ERROR_MESSAGES.INTERNAL_ERROR

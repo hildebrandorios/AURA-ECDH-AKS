@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { createApp } from './app';
 import { InfrastructureFactory } from './infrastructure/factories/infrastructure.factory';
 import { ENV_KEYS } from './config/constants';
+import { STRINGS } from './config/string-constants';
 
 const start = async () => {
     try {
@@ -9,13 +10,12 @@ const start = async () => {
         const portStr = process.env[ENV_KEYS.PORT];
         const port = portStr ? parseInt(portStr) : 3000;
 
-        // Initialize Infrastructure Services (Master Entropy, etc)
         const identityService = InfrastructureFactory.getIdentityService();
         await identityService.initialize();
-        app.log.info('Identity Service initialized with Master Entropy');
+        app.log.info(STRINGS.LOG_IDENTITY_INIT);
 
         await app.listen({ port, host: '0.0.0.0' });
-        console.log(`Server listening on ${port}`);
+        console.log(`${STRINGS.LOG_SERVER_LISTENING} ${port}`);
 
         const signals = ['SIGINT', 'SIGTERM'] as const;
         signals.forEach((signal) => {
@@ -24,7 +24,6 @@ const start = async () => {
                 process.exit(0);
             });
         });
-
     } catch (err) {
         console.error(err);
         process.exit(1);

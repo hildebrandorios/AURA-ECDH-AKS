@@ -1,5 +1,5 @@
 import { LocalKeyAdapter } from '../../src/infrastructure/adapters/local-key.adapter';
-import { ERROR_MESSAGES } from '../../src/config/constants';
+import { ERROR_MESSAGES, STRINGS } from '../../src/config/string-constants';
 import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -8,12 +8,14 @@ jest.mock('fs');
 
 describe('LocalKeyAdapter', () => {
     let adapter: LocalKeyAdapter;
-    const mockEccPrivateKey = '041234567890abcdef...'; // Partial mock hex
-    const { privateKey, publicKey } = crypto.generateKeyPairSync('rsa', {
+    const { privateKey: ecPriv, publicKey: ecPub } = crypto.generateKeyPairSync('ec', { namedCurve: 'secp256k1' });
+    const mockEccPrivateKey = ecPriv.export({ type: 'pkcs8', format: 'pem' }) as string;
+
+    const { privateKey: rsaPriv, publicKey: rsaPub } = crypto.generateKeyPairSync('rsa', {
         modulusLength: 2048,
     });
-    const mockRsaPrivateKey = privateKey.export({ type: 'pkcs1', format: 'pem' }) as string;
-    const mockRsaPublicKey = publicKey.export({ type: 'spki', format: 'pem' }) as string;
+    const mockRsaPrivateKey = rsaPriv.export({ type: 'pkcs1', format: 'pem' }) as string;
+    const mockRsaPublicKey = rsaPub.export({ type: 'spki', format: 'pem' }) as string;
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -22,8 +24,8 @@ describe('LocalKeyAdapter', () => {
     it('should initialize correctly with direct values', async () => {
         adapter = new LocalKeyAdapter(mockEccPrivateKey, mockRsaPrivateKey);
         await adapter.initialize();
-        expect(adapter.getEntropy()).toBe(mockEccPrivateKey);
-        expect(await adapter.getRSAPublicKey()).toBe(mockRsaPublicKey);
+        expect(adapter.getEntropy().trim()).toBe(mockEccPrivateKey.trim());
+        expect((await adapter.getRSAPublicKey()).trim()).toBe(mockRsaPublicKey.trim());
     });
 
     it('should initialize correctly with file paths', async () => {
@@ -31,6 +33,7 @@ describe('LocalKeyAdapter', () => {
         const rsaPath = './keys/rsa.key';
 
         (fs.existsSync as jest.Mock).mockReturnValue(true);
+        (fs.lstatSync as jest.Mock).mockReturnValue({ isFile: () => true });
         (fs.readFileSync as jest.Mock).mockImplementation((p: string) => {
             if (p.includes('ecc')) return mockEccPrivateKey;
             if (p.includes('rsa')) return mockRsaPrivateKey;
@@ -41,12 +44,12 @@ describe('LocalKeyAdapter', () => {
         await adapter.initialize();
 
         expect(fs.existsSync).toHaveBeenCalledTimes(2);
-        expect(adapter.getEntropy()).toBe(mockEccPrivateKey);
+        expect(adapter.getEntropy().trim()).toBe(mockEccPrivateKey.trim());
     });
 
     it('should throw error if ECC key is missing', async () => {
         adapter = new LocalKeyAdapter('', mockRsaPrivateKey);
-        await expect(adapter.initialize()).rejects.toThrow(`${ERROR_MESSAGES.KEY_ERROR}: ECC Private Key not found.`);
+        await expect(adapter.initialize()).rejects.toThrow(`${ERROR_MESSAGES.KEY_ERROR}: ${STRINGS.ERR_ECC_KEY_NOT_FOUND}`);
     });
 
     it('should throw error if RSA key is missing', async () => {
@@ -78,10 +81,6 @@ describe('LocalKeyAdapter', () => {
         const plaintext = "Hello World";
         const encryptedB64 = adapter.encryptRSAPrivate(plaintext);
 
-        // Verify with public key (reverse of sign in this context, or decrypt with public if it was encryption... 
-        // usage in codebase implies privateEncrypt which is signing-like or low-level encryption. 
-        // Node's publicDecrypt reverses privateEncrypt)
-
         const decryptedBuffer = crypto.publicDecrypt({
             key: mockRsaPublicKey,
             padding: crypto.constants.RSA_PKCS1_PADDING
@@ -89,4 +88,5 @@ describe('LocalKeyAdapter', () => {
 
         expect(decryptedBuffer.toString('utf8')).toBe(plaintext);
     });
+
 });

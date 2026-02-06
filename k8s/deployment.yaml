@@ -83,15 +83,3 @@ spec:
                 name: app-rsa-key
             - secret:
                 name: app-ecc-key
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: aura-ecdh-service
-spec:
-  type: LoadBalancer
-  ports:
-  - port: 80
-    targetPort: 3000
-  selector:
-    app: aura-ecdh

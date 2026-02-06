@@ -36,8 +36,7 @@ El sistema requiere las siguientes variables de entorno configuradas en un archi
 | `RSA_PRIVATE_KEY` | Ruta al archivo `.pem` o contenido de la clave privada | `./keys/rsa.key` o `-----BEGIN...` |
 | `REDIS_CONNECTION_STRING` | Cadena de conexión a Redis | `redis://:pass@host:6379` |
 
-
-> **Nota sobre `RSA_PRIVATE_KEY`**: Para entornos de producción (Docker/K8s), se recomienda montar la clave como un archivo (Secret) y apuntar esta variable a la ruta del archivo (ej: `/app/keys/private.key`).
+> **Nota sobre Seguridad**: El sistema utiliza **Validación Estricta**. Si una llave configurada no es un PEM válido ni una ruta a un archivo real, el servidor no arrancará para evitar derivaciones inseguras.
 
 ## 🐳 Despliegue con Docker y Kubernetes
 
@@ -89,6 +88,7 @@ El sistema sigue los principios de **Arquitectura Limpia (Clean Architecture)**:
     - **Formato Optimizado**: Mensajes en `Base64(IV + Tag + Payload)` para minimizar el tamaño del JSON.
 - **Infraestructura**:
     - **Local Key Adapter**: Gestión de identidad usando llaves inyectadas.
+    - **Hot-Reload**: Recarga en caliente automática al actualizar archivos de llaves (ideal para K8s Secrets).
     - **Redis**: Gestión de sesiones con TTL automático.
 
 ## 🧪 Pruebas Automatizadas
