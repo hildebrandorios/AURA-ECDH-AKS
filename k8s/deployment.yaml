@@ -6,6 +6,11 @@ metadata:
     app: aura-ecdh
 spec:
   replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   selector:
     matchLabels:
       app: aura-ecdh
@@ -23,7 +28,7 @@ spec:
         image: pragmaregistry.azurecr.io/aura-ecdh:v1
         imagePullPolicy: IfNotPresent
         volumeMounts:
-          - name: rsa-key-volume
+          - name: keys-volume
             mountPath: "/app/keys"
             readOnly: true
         ports:
@@ -43,16 +48,11 @@ spec:
             secretKeyRef:
               name: app-secrets
               key: redis-connection
-        - name: AKV_VAULT_URL
+        - name: ECC_PRIVATE_KEY
           valueFrom:
-            configMapKeyRef:
-              name: app-config
-              key: vault-url
-        - name: AKV_MASTER_KEY_NAME
-          valueFrom:
-            configMapKeyRef:
-              name: app-config
-              key: master-key-name
+            secretKeyRef:
+              name: app-ecc-key
+              key: private-key
         resources:
           requests:
             memory: "128Mi"
@@ -76,9 +76,13 @@ spec:
           readOnlyRootFilesystem: true
           allowPrivilegeEscalation: false
       volumes:
-        - name: rsa-key-volume
-          secret:
-            secretName: app-rsa-key
+        - name: keys-volume
+          projected:
+            sources:
+            - secret:
+                name: app-rsa-key
+            - secret:
+                name: app-ecc-key
 ---
 apiVersion: v1
 kind: Service

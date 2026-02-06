@@ -1,11 +1,11 @@
 import { InfrastructureFactory } from '../../src/infrastructure/factories/infrastructure.factory';
 import { NativeCryptoAdapter } from '../../src/infrastructure/adapters/native-crypto.adapter';
-import { AzureKeyVaultAdapter } from '../../src/infrastructure/adapters/key-vault.adapter';
+import { LocalKeyAdapter } from '../../src/infrastructure/adapters/local-key.adapter';
 import { RedisSessionRepository } from '../../src/infrastructure/adapters/redis-session.repository';
 
 // Mock all adapters
 jest.mock('../../src/infrastructure/adapters/native-crypto.adapter');
-jest.mock('../../src/infrastructure/adapters/key-vault.adapter');
+jest.mock('../../src/infrastructure/adapters/local-key.adapter');
 jest.mock('../../src/infrastructure/adapters/redis-session.repository');
 
 describe('InfrastructureFactory (Unit)', () => {
@@ -14,8 +14,8 @@ describe('InfrastructureFactory (Unit)', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         process.env = { ...originalEnv };
-        process.env.AKV_VAULT_URL = 'https://test.vault.azure.net';
-        process.env.AKV_MASTER_KEY_NAME = 'test-key';
+        process.env.ECC_PRIVATE_KEY = '04...';
+        process.env.RSA_PRIVATE_KEY = 'mock-private-key';
         process.env.REDIS_CONNECTION_STRING = 'redis://localhost';
 
         // Reset singleton instances via reflection/access
@@ -36,12 +36,12 @@ describe('InfrastructureFactory (Unit)', () => {
         expect(NativeCryptoAdapter).toHaveBeenCalledTimes(1);
     });
 
-    it('should provide an AzureKeyVaultAdapter and reuse the instance', () => {
+    it('should provide a LocalKeyAdapter and reuse the instance', () => {
         const service1 = InfrastructureFactory.getIdentityService();
         const service2 = InfrastructureFactory.getIdentityService();
         expect(service1).toBeDefined();
         expect(service1).toBe(service2);
-        expect(AzureKeyVaultAdapter).toHaveBeenCalledWith('https://test.vault.azure.net', 'test-key', '');
+        expect(LocalKeyAdapter).toHaveBeenCalledWith('04...', 'mock-private-key');
     });
 
     it('should provide a RedisSessionRepository and reuse the instance', () => {
@@ -53,13 +53,14 @@ describe('InfrastructureFactory (Unit)', () => {
     });
 
     it('should handle missing env vars with empty string fallbacks', () => {
-        delete process.env.AKV_VAULT_URL;
+        delete process.env.ECC_PRIVATE_KEY;
+        delete process.env.RSA_PRIVATE_KEY;
         delete process.env.REDIS_CONNECTION_STRING;
 
         InfrastructureFactory.getIdentityService();
         InfrastructureFactory.getSessionRepository();
 
-        expect(AzureKeyVaultAdapter).toHaveBeenCalledWith('', 'test-key', '');
+        expect(LocalKeyAdapter).toHaveBeenCalledWith('', '');
         expect(RedisSessionRepository).toHaveBeenCalledWith('');
     });
 

@@ -51,8 +51,8 @@ export class PerformHandshake {
             this.sessionRepository.storeLastKidMapping(deviceId, kid, ttl)
         ]);
 
-        const pubPHex = backendPrimaryPair.publicKeyHex!;
-        const pubEHex = backendEphemeralPair.publicKeyHex!;
+        const pubPHex = backendPrimaryPair.publicKey;
+        const pubEHex = backendEphemeralPair.publicKey;
 
         return {
             publicKeyPrimary: this.identityService.encryptRSAPrivate(pubPHex),

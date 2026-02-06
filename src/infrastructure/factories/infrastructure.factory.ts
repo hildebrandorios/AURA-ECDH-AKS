@@ -3,7 +3,7 @@ import { ICryptoProvider } from "../../domain/interfaces/crypto-provider.interfa
 import { IIdentityService } from "../../domain/interfaces/identity-service.interface";
 import { ISessionRepository } from "../../domain/interfaces/session-repository.interface";
 import { NativeCryptoAdapter } from "../adapters/native-crypto.adapter";
-import { AzureKeyVaultAdapter } from "../adapters/key-vault.adapter";
+import { LocalKeyAdapter } from "../adapters/local-key.adapter";
 import { RedisSessionRepository } from "../adapters/redis-session.repository";
 import { ProcessEncryptedData } from "../../application/use-cases/process-encrypted-data.use-case";
 import { PerformHandshake } from "../../application/use-cases/perform-handshake.use-case";
@@ -26,10 +26,9 @@ export class InfrastructureFactory {
 
     public static getIdentityService(): IIdentityService {
         if (!this.identityService) {
-            const vaultUrl = this.getEnv(ENV_KEYS.VAULT_URL);
-            const masterKeyName = this.getEnv(ENV_KEYS.MASTER_KEY_NAME);
-            const rsaKeyName = this.getEnv(ENV_KEYS.RSA_KEY_NAME);
-            this.identityService = new AzureKeyVaultAdapter(vaultUrl, masterKeyName, rsaKeyName);
+            const eccPrivateKey = this.getEnv(ENV_KEYS.ECC_PRIVATE_KEY);
+            const rsaPrivateKey = this.getEnv(ENV_KEYS.RSA_PRIVATE_KEY);
+            this.identityService = new LocalKeyAdapter(eccPrivateKey, rsaPrivateKey);
         }
         return this.identityService;
     }

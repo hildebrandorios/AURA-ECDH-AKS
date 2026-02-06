@@ -14,7 +14,6 @@ describe('NativeCryptoAdapter', () => {
     it('should generate a valid key pair', () => {
         expect(keyPair).toHaveProperty('privateKey');
         expect(keyPair).toHaveProperty('publicKey');
-        expect(keyPair.publicKey).toContain('-----BEGIN PUBLIC KEY-----');
     });
 
     it('should validate a correct public key in PEM format', () => {
@@ -47,7 +46,6 @@ describe('NativeCryptoAdapter', () => {
         const salt = Buffer.from('salt');
         const derived = adapter.deriveKeyPairFromEntropy(entropy, salt);
         expect(derived.privateKey).toBeDefined();
-        expect(derived.publicKey).toContain('-----BEGIN PUBLIC KEY-----');
     });
 
     it('should derive key pair from non-hex entropy (utf8 branch)', () => {
@@ -104,7 +102,6 @@ describe('NativeCryptoAdapter', () => {
     it('should generate a valid X25519 key pair', () => {
         const kp = adapter.generateKeyPair(CryptoCurve.X25519);
         expect(kp.curve).toBe(CryptoCurve.X25519);
-        expect(kp.publicKey).toContain('-----BEGIN PUBLIC KEY-----');
     });
 
     it('should compute X25519 shared secret correctly', () => {

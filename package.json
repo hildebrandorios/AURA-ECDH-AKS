@@ -16,9 +16,6 @@
     "docker:build": "docker build -t aura-ecdh ."
   },
   "dependencies": {
-    "@azure/identity": "^4.13.0",
-    "@azure/keyvault-keys": "^4.10.0",
-    "@azure/keyvault-secrets": "^4.10.0",
     "@fastify/cors": "^11.2.0",
     "dotenv": "^16.4.5",
     "fastify": "^5.7.4",

@@ -44,13 +44,11 @@ export class NativeCryptoAdapter implements ICryptoProvider {
         if (curve === CryptoCurve.X25519) {
             const keyPair = generateKeyPairSync(CryptoCurve.X25519);
             const privHex = keyPair.privateKey.export({ format: 'jwk' }).d!;
-            const pubPEM = keyPair.publicKey.export({ type: 'spki', format: 'pem' }) as string;
             const pubHex = Buffer.from((keyPair.publicKey.export({ format: 'jwk' }) as any).x, Encoding.BASE64URL).toString(Encoding.HEX);
 
             return {
                 privateKey: Buffer.from(privHex, Encoding.BASE64URL).toString(Encoding.HEX),
-                publicKey: pubPEM,
-                publicKeyHex: pubHex,
+                publicKey: pubHex,
                 curve: CryptoCurve.X25519
             };
         }
@@ -61,8 +59,7 @@ export class NativeCryptoAdapter implements ICryptoProvider {
 
         return {
             privateKey: ecdh.getPrivateKey(Encoding.HEX),
-            publicKey: this.exportPublicKeyToPEM(pubHex, CryptoCurve.SECP256K1),
-            publicKeyHex: pubHex,
+            publicKey: pubHex,
             curve: CryptoCurve.SECP256K1
         };
     }
@@ -80,12 +77,10 @@ export class NativeCryptoAdapter implements ICryptoProvider {
         const ecdh = createECDH(CryptoCurve.SECP256K1);
         ecdh.setPrivateKey(Buffer.from(privateKeyHex, Encoding.HEX));
         const publicKeyHex = ecdh.getPublicKey(Encoding.HEX);
-        const publicKeyPEM = this.exportPublicKeyToPEM(publicKeyHex);
 
         return {
             privateKey: privateKeyHex,
-            publicKey: publicKeyPEM,
-            publicKeyHex: publicKeyHex
+            publicKey: publicKeyHex,
         };
     }
 

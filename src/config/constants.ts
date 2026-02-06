@@ -47,9 +47,6 @@ export const CRYPTO = {
     /** Hash algorithm for key derivation */
     HASH_ALGORITHM: 'sha256' as const,
 
-    /** Azure Key Vault signature algorithm */
-    SIGNATURE_ALGORITHM: 'ES256K' as const,
-
     /** RSA Padding labels */
     RSA_OAEP_PADDING: 'RSA_PKCS1_OAEP_PADDING' as const,
     RSA_PKCS1_PADDING: 'RSA_PKCS1_PADDING' as const,
@@ -75,7 +72,7 @@ export const ERROR_MESSAGES = {
     UNAUTHORIZED: "Unauthorized access",
     HANDSHAKE_FAILED: "Handshake process failed",
     DECRYPTION_FAILED: "Decryption failed",
-    KEY_VAULT_ERROR: "Azure Key Vault service error",
+    KEY_ERROR: "Key service error", // Renamed from KEY_VAULT_ERROR
 } as const;
 
 /**
@@ -102,9 +99,7 @@ export const REDIS_KEYS = {
  * Environment variable keys
  */
 export const ENV_KEYS = {
-    VAULT_URL: 'AKV_VAULT_URL' as const,
-    MASTER_KEY_NAME: 'AKV_MASTER_KEY_NAME' as const,
-    RSA_KEY_NAME: 'AKV_RSA_KEY_NAME' as const,
+    ECC_PRIVATE_KEY: 'ECC_PRIVATE_KEY' as const, // Changed from ECC_PUBLIC_KEY
     RSA_PRIVATE_KEY: 'RSA_PRIVATE_KEY' as const,
     REDIS_CONNECTION: 'REDIS_CONNECTION_STRING' as const,
     PORT: 'PORT' as const,

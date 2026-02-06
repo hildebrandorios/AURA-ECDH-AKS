@@ -100,7 +100,7 @@ export class ProcessEncryptedData {
         const encryptedDataB64 = encodeEncrypted(encRes);
 
         // 12. Encrypt New Backend Ephemeral Public Key (HEX) with primarySecret
-        const encNextEph = this.cryptoProvider.encryptAESGCM(primarySecret, nextKeyPair.publicKeyHex!);
+        const encNextEph = this.cryptoProvider.encryptAESGCM(primarySecret, nextKeyPair.publicKey);
         const nextEphB64 = encodeEncrypted(encNextEph);
 
         return {

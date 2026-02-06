@@ -17,7 +17,7 @@ EQIDAQAB
 -----END PUBLIC KEY-----`;
 
 async function runDemo() {
-    const baseUrl = 'http://20.15.241.22/api';
+    const baseUrl = 'http://localhost:3000/api';
     const NAMESPACE = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
     const deviceId = uuidv5(uuidv4(), NAMESPACE);
 

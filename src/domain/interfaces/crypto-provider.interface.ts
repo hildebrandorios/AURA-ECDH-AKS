@@ -3,7 +3,6 @@ import { CryptoCurve } from "../../config/constants";
 export interface KeyPair {
     privateKey: string;
     publicKey: string;
-    publicKeyHex?: string;
     curve?: CryptoCurve;
 }
 
