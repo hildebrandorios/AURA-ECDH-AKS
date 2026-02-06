@@ -57,7 +57,8 @@ export class PerformHandshake {
         return {
             publicKeyPrimary: this.identityService.encryptRSAPrivate(pubPHex),
             publicKeyEphemeral: this.identityService.encryptRSAPrivate(pubEHex),
-            kid
+            kid,
+            duration: 100
         };
     }
 }

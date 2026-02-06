@@ -4,6 +4,7 @@ export interface HandshakeRequestDTO {
 }
 
 export interface HandshakeResponseDTO {
+    duration: number;
     publicKeyPrimary: string; // RSA Encrypted Base64 (Server Private Key) - DER/HEX format inside
     publicKeyEphemeral: string; // RSA Encrypted Base64 (Server Private Key) - DER/HEX format inside
     kid: string;

@@ -17,7 +17,7 @@ EQIDAQAB
 -----END PUBLIC KEY-----`;
 
 async function runDemo() {
-    const baseUrl = 'http://localhost:3000/api';
+    const baseUrl = 'http://20.15.241.22/api';
     const NAMESPACE = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
     const deviceId = uuidv5(uuidv4(), NAMESPACE);
 
@@ -74,7 +74,7 @@ async function runDemo() {
     console.log('\x1b[33m%s\x1b[0m', '>> REQUEST HANDSHAKE:');
     console.log(JSON.stringify(hsRequest, null, 2));
 
-    const hsResponse = await fetch(`${baseUrl}/httpTriggerHandsheck`, {
+    const hsResponse = await fetch(`${baseUrl}/handshake`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(hsRequest)
@@ -130,7 +130,7 @@ async function runDemo() {
     console.log('\x1b[33m%s\x1b[0m', '>> REQUEST PROCESS:');
     console.log(JSON.stringify(processRequest, null, 2));
 
-    const procResponse = await fetch(`${baseUrl}/httpTriggerProcess`, {
+    const procResponse = await fetch(`${baseUrl}/process`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(processRequest)

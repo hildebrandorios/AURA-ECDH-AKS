@@ -17,8 +17,8 @@ describe('HandshakeController', () => {
         jest.clearAllMocks();
         mockReq = {
             body: {
-                deviceId: 'enc-device',
-                publicKeyPrimary: 'enc-key'
+                deviceId: '550e8400-e29b-41d4-a716-446655440000',
+                publicKeyPrimary: 'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAabcde1234567890abcdef'
             },
             log: {
                 info: jest.fn(),
@@ -69,7 +69,8 @@ describe('HandshakeController', () => {
 
         expect(mockReply.status).toHaveBeenCalledWith(500);
         expect(mockReply.send).toHaveBeenCalledWith(expect.objectContaining({
-            body: "Internal Server Error"
+            error: "Internal Server Error",
+            status: 500
         }));
     });
 });

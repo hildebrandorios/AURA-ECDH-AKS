@@ -78,7 +78,8 @@ describe('PerformHandshake Use Case', () => {
         expect(result).toEqual({
             publicKeyPrimary: 'enc-res',
             publicKeyEphemeral: 'enc-res',
-            kid: expect.any(String)
+            kid: expect.any(String),
+            duration: expect.any(Number)
         });
 
         expect(identityService.decryptRSA).toHaveBeenCalledWith('enc-key');

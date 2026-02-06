@@ -20,7 +20,7 @@
     "@azure/keyvault-keys": "^4.10.0",
     "@azure/keyvault-secrets": "^4.10.0",
     "@fastify/cors": "^11.2.0",
-    "dotenv": "^17.2.3",
+    "dotenv": "^16.4.5",
     "fastify": "^5.7.4",
     "fastify-plugin": "^4.5.1",
     "redis": "^5.10.0",

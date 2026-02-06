@@ -73,7 +73,8 @@ const metrics: Metrics = {
 };
 
 function logError(msg: string) {
-    fs.appendFileSync(LOG_FILE, `[${new Date().toISOString()}] ${msg}\n`);
+    // Security: Avoid writing sensitive errors to disk in production/CI environments
+    console.error(`[${new Date().toISOString()}] ${msg}`);
 }
 
 const encryptRSAPublic = (publicKey: string, data: string) => {

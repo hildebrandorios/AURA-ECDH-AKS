@@ -19,8 +19,8 @@ describe('App Setup (Unit)', () => {
         const mockInstance = mockFastify();
 
         expect(mockInstance.register).toHaveBeenCalled();
-        expect(mockInstance.post).toHaveBeenCalledWith('/api/httpTriggerHandsheck', expect.any(Function));
-        expect(mockInstance.post).toHaveBeenCalledWith('/api/httpTriggerProcess', expect.any(Function));
+        expect(mockInstance.post).toHaveBeenCalledWith('/api/handshake', expect.any(Function));
+        expect(mockInstance.post).toHaveBeenCalledWith('/api/process', expect.any(Function));
         expect(mockInstance.get).toHaveBeenCalledWith('/health', expect.any(Function));
     });
 

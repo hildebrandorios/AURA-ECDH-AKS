@@ -25,6 +25,7 @@ export class ProcessController {
 
             const duration = Date.now() - start;
             request.log.info(`[Process] SUCCESS - Total Duration: ${duration}ms`);
+            result.duration = duration;
 
             return reply.status(HttpStatus.OK).send(result);
 
@@ -37,8 +38,8 @@ export class ProcessController {
 
             return reply.status(statusCode).send({
                 status: statusCode,
-                error: error.message.includes('401') ? ERROR_MESSAGES.UNAUTHORIZED : ERROR_MESSAGES.INTERNAL_ERROR,
-                detail: error.message
+                error: error.message.includes('401') ? ERROR_MESSAGES.UNAUTHORIZED : ERROR_MESSAGES.INTERNAL_ERROR
+                // detail field removed for security
             });
         }
     }

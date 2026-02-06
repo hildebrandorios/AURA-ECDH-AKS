@@ -10,8 +10,9 @@ export const createApp = async (): Promise<FastifyInstance> => {
     });
 
     // Plugins
+    const corsOrigin = process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN : true;
     await app.register(cors, {
-        origin: true
+        origin: corsOrigin
     });
 
     // Routes

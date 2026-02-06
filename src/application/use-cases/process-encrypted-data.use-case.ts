@@ -106,7 +106,8 @@ export class ProcessEncryptedData {
         return {
             encryptedData: encryptedDataB64,
             publicKeyEphemeral: nextEphB64,
-            kid: nextKid
+            kid: nextKid,
+            duration: 100
         };
     }
 }
