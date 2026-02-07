@@ -6,7 +6,12 @@ const tsJestTransformCfg = createDefaultPreset().transform;
 module.exports = {
   testEnvironment: "node",
   transform: {
-    ...tsJestTransformCfg,
+    "^.+\\.tsx?$": [
+      "ts-jest",
+      {
+        tsconfig: "tsconfig.test.json",
+      },
+    ],
   },
   modulePathIgnorePatterns: ["<rootDir>/dist/"],
   testEnvironmentOptions: {
@@ -33,7 +38,12 @@ module.exports = {
       displayName: "unit",
       testMatch: ["<rootDir>/tests/unit/**/*.test.ts"],
       transform: {
-        ...tsJestTransformCfg,
+        "^.+\\.tsx?$": [
+          "ts-jest",
+          {
+            tsconfig: "tsconfig.test.json",
+          },
+        ],
       },
     },
     {

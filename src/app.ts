@@ -2,11 +2,12 @@ import Fastify, { FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import { HandshakeController } from './controllers/handshake.controller';
 import { ProcessController } from './controllers/process.controller';
+import { SERVER_CONFIG } from './config/constants';
 
 export const createApp = async (): Promise<FastifyInstance> => {
     const app = Fastify({
         logger: true,
-        connectionTimeout: 30000,
+        connectionTimeout: SERVER_CONFIG.CONNECTION_TIMEOUT,
     });
 
     // Plugins

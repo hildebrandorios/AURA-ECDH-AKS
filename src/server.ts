@@ -1,24 +1,23 @@
 import 'dotenv/config';
 import { createApp } from './app';
 import { InfrastructureFactory } from './infrastructure/factories/infrastructure.factory';
-import { ENV_KEYS } from './config/constants';
+import { ENV_KEYS, SERVER_CONFIG } from './config/constants';
 import { STRINGS } from './config/string-constants';
 
 const start = async () => {
     try {
         const app = await createApp();
         const portStr = process.env[ENV_KEYS.PORT];
-        const port = portStr ? parseInt(portStr) : 3000;
+        const port = portStr ? parseInt(portStr) : SERVER_CONFIG.DEFAULT_PORT;
 
         const identityService = InfrastructureFactory.getIdentityService();
         await identityService.initialize();
         app.log.info(STRINGS.LOG_IDENTITY_INIT);
 
-        await app.listen({ port, host: '0.0.0.0' });
+        await app.listen({ port, host: SERVER_CONFIG.HOST });
         console.log(`${STRINGS.LOG_SERVER_LISTENING} ${port}`);
 
-        const signals = ['SIGINT', 'SIGTERM'] as const;
-        signals.forEach((signal) => {
+        SERVER_CONFIG.SHUTDOWN_SIGNALS.forEach((signal) => {
             process.on(signal, async () => {
                 await app.close();
                 process.exit(0);

@@ -60,6 +60,12 @@ export const CRYPTO = {
     /** AES lengths */
     IV_BYTES: 12,
     TAG_BYTES: 16,
+
+    /** X25519 PKCS8 Header (ASN.1) */
+    X25519_PKCS8_HEADER_HEX: '302e020100300506032b656e04220420' as const,
+
+    /** Identity Derivation context */
+    DERIVATION_INFO: 'aura-ecdh-identity-derivation' as const,
 } as const;
 
 
@@ -87,7 +93,7 @@ export const REDIS_KEYS = {
  * Environment variable keys
  */
 export const ENV_KEYS = {
-    ECC_PRIVATE_KEY: 'ECC_PRIVATE_KEY' as const, // Changed from ECC_PUBLIC_KEY
+    ECC_PRIVATE_KEY: 'ECC_PRIVATE_KEY' as const,
     RSA_PRIVATE_KEY: 'RSA_PRIVATE_KEY' as const,
     REDIS_CONNECTION: 'REDIS_CONNECTION_STRING' as const,
     PORT: 'PORT' as const,
@@ -111,4 +117,6 @@ export const SERVER_CONFIG = {
     DEFAULT_PORT: 3000,
     CONNECTION_TIMEOUT: 30000,
     WATCHER_DEBOUNCE_MS: 200,
+    HOST: '0.0.0.0',
+    SHUTDOWN_SIGNALS: ['SIGINT', 'SIGTERM'] as const,
 } as const;

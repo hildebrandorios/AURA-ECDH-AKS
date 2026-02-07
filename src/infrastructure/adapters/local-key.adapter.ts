@@ -1,12 +1,9 @@
 import { IIdentityService } from "../../domain/interfaces/identity-service.interface";
 import { createPublicKey, createPrivateKey, privateDecrypt, privateEncrypt, constants } from "node:crypto";
-import { CRYPTO, Encoding } from "../../config/constants";
+import { CRYPTO, Encoding, VALIDATION, SERVER_CONFIG } from "../../config/constants";
 import { STRINGS, ERROR_MESSAGES } from "../../config/string-constants";
 import * as fs from 'fs';
 import * as path from 'path';
-
-const WATCHER_DEBOUNCE_MS = 200;
-const PEM_BEGIN_MARKER = '-----BEGIN';
 
 export class LocalKeyAdapter implements IIdentityService {
     private rsaPrivateKey: string | null = null;
@@ -61,7 +58,7 @@ export class LocalKeyAdapter implements IIdentityService {
     private resolveKey(configValue: string): { content: string | null; filePath?: string } {
         if (!configValue) return { content: null };
 
-        if (configValue.includes(PEM_BEGIN_MARKER)) {
+        if (configValue.includes(VALIDATION.PEM_MARKER)) {
             return { content: configValue.trim() };
         }
 
@@ -103,7 +100,7 @@ export class LocalKeyAdapter implements IIdentityService {
                     } catch (err: any) {
                         console.error(`${STRINGS.LOG_HOT_RELOAD_FAILED} ${type} at ${filePath}: ${err.message}. ${STRINGS.LOG_HOT_RELOAD_ERROR_TAIL}`);
                     }
-                }, WATCHER_DEBOUNCE_MS);
+                }, SERVER_CONFIG.WATCHER_DEBOUNCE_MS);
             }
         });
     }

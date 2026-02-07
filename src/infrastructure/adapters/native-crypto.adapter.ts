@@ -65,14 +65,22 @@ export class NativeCryptoAdapter implements ICryptoProvider {
     }
 
     public deriveKeyPairFromEntropy(entropy: string, salt: Buffer): KeyPair {
-        const hash = createHash(CRYPTO.HASH_ALGORITHM);
+        let ikm: Buffer;
+        // Strict hex check for entropy to avoid ambiguity
         if (/^[0-9a-fA-F]+$/.test(entropy) && entropy.length % 2 === 0) {
-            hash.update(Buffer.from(entropy, Encoding.HEX));
+            ikm = Buffer.from(entropy, Encoding.HEX);
         } else {
-            hash.update(Buffer.from(entropy, Encoding.UTF8));
+            ikm = Buffer.from(entropy, Encoding.UTF8);
         }
-        hash.update(salt);
-        const privateKeyHex = hash.digest(Encoding.HEX);
+
+        // Use HKDF (RFC 5869) for secure key derivation
+        // info: context-specific string to bind derivation to this specific purpose
+        // info: context-specific string to bind derivation to this specific purpose
+        const info = Buffer.from(CRYPTO.DERIVATION_INFO, Encoding.UTF8);
+        const keyLength = 32; // 32 bytes = 256 bits for secp256k1
+
+        const derivedKey = hkdfSync(CRYPTO.HASH_ALGORITHM, ikm, salt, info, keyLength);
+        const privateKeyHex = Buffer.from(derivedKey).toString(Encoding.HEX);
 
         const ecdh = createECDH(CryptoCurve.SECP256K1);
         ecdh.setPrivateKey(Buffer.from(privateKeyHex, Encoding.HEX));
@@ -87,7 +95,7 @@ export class NativeCryptoAdapter implements ICryptoProvider {
     public computeSharedSecret(privateKeyHex: string, otherPublicKey: string, curve: CryptoCurve = CRYPTO.DEFAULT_CURVE): string {
         try {
             if (curve === CryptoCurve.X25519) {
-                const pkcs8Header = Buffer.from('302e020100300506032b656e04220420', Encoding.HEX);
+                const pkcs8Header = Buffer.from(CRYPTO.X25519_PKCS8_HEADER_HEX, Encoding.HEX);
                 const der = Buffer.concat([pkcs8Header, Buffer.from(privateKeyHex, Encoding.HEX)]);
 
                 const myPrivKey = createPrivateKey({
