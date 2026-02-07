@@ -26,33 +26,25 @@ spec:
       containers:
       - name: aura-ecdh
         image: pragmaregistry.azurecr.io/aura-ecdh:v1
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         volumeMounts:
-          - name: keys-volume
-            mountPath: "/app/keys"
+          - name: secrets-store01-inline
+            mountPath: "/mnt/secrets-store"
             readOnly: true
         ports:
         - containerPort: 3000
         env:
-        # NOTE: Secrets should be injected via generic K8s secrets or CSI driver, not plain text here.
-        # This is just a placeholder example.
         - name: PORT
           value: "3000"
         - name: RSA_PRIVATE_KEY
-          valueFrom:
-            secretKeyRef:
-              name: app-rsa-key
-              key: private-key
+          value: "/mnt/secrets-store/rsa-ecdh"
         - name: REDIS_CONNECTION_STRING
           valueFrom:
             secretKeyRef:
               name: app-secrets
               key: redis-connection
         - name: ECC_PRIVATE_KEY
-          valueFrom:
-            secretKeyRef:
-              name: app-ecc-key
-              key: private-key
+          value: "/mnt/secrets-store/ecc-ecdh"
         resources:
           requests:
             memory: "128Mi"
@@ -77,9 +69,10 @@ spec:
           allowPrivilegeEscalation: false
       volumes:
         - name: keys-volume
-          projected:
-            sources:
-            - secret:
-                name: app-rsa-key
-            - secret:
-                name: app-ecc-key
+          emptyDir: {}
+        - name: secrets-store01-inline
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: azure-kv-provider
